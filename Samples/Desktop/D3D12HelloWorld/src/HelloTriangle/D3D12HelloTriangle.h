@@ -65,6 +65,7 @@ private:
     ComPtr<ID3D12Fence> m_fence;
     UINT64 m_fenceValue;
 
+    void LoadPixGpuCapturer();
     void LoadPipeline();
     void LoadAssets();
     void PopulateCommandList();

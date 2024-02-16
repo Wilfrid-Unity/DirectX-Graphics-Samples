@@ -23,8 +23,52 @@ D3D12HelloTriangle::D3D12HelloTriangle(UINT width, UINT height, std::wstring nam
 
 void D3D12HelloTriangle::OnInit()
 {
+    LoadPixGpuCapturer(); // should be called before any D3D12 call such as D3D12CreateDevice
     LoadPipeline();
     LoadAssets();
+}
+
+// Code from https://devblogs.microsoft.com/pix/taking-a-capture/
+#include <filesystem>
+#include <shlobj.h>
+void D3D12HelloTriangle::LoadPixGpuCapturer()
+{
+    // GetLatestWinPixGpuCapturerPath_Cpp17
+    std::wstring latestWinPixGpuCapturerPath;
+    {
+		LPWSTR programFilesPath = nullptr;
+		SHGetKnownFolderPath(FOLDERID_ProgramFiles, KF_FLAG_DEFAULT, NULL, &programFilesPath);
+
+		std::filesystem::path pixInstallationPath = programFilesPath;
+		pixInstallationPath /= "Microsoft PIX";
+
+		std::wstring newestVersionFound;
+
+		for (auto const& directory_entry : std::filesystem::directory_iterator(pixInstallationPath))
+		{
+			if (directory_entry.is_directory())
+			{
+				if (newestVersionFound.empty() || newestVersionFound < directory_entry.path().filename().c_str())
+				{
+					newestVersionFound = directory_entry.path().filename().c_str();
+				}
+			}
+		}
+
+		if (newestVersionFound.empty())
+		{
+			// TODO: Error, no PIX installation found
+		}
+
+        latestWinPixGpuCapturerPath = pixInstallationPath / newestVersionFound / L"WinPixGpuCapturer.dll";
+    }
+
+	// Check to see if a copy of WinPixGpuCapturer.dll has already been injected into the application.
+    // This may happen if the application is launched through the PIX UI. 
+	if (GetModuleHandle(L"WinPixGpuCapturer.dll") == 0)
+	{
+		LoadLibrary(latestWinPixGpuCapturerPath.c_str());
+	}
 }
 
 // Load the rendering pipeline dependencies.
